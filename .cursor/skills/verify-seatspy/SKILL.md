@@ -72,6 +72,7 @@ Proof standards:
 - Drive `python -m seatspy`, not `Account` methods, except pytest which is offline isolation only.
 - Capture the command and the resulting envelope. A green pytest run is not a live proof.
 - Login side effect is `cookies_exist_after` true and `stored` true. Do not open the jar in evidence.
+- After login, quota must return `status` `ok`. `SESSION_EXPIRED` is a failed live proof.
 - Quota must not create a search. `search_consumed` is absent on quota envelopes.
 - Dry-run must show `search_consumed` false. Live search must show `search_consumed` true and a `day_count`.
 - Assert September business availability from `day_count` and first/last dates in `stdout.json` if needed. Do not dump the day list into chat.
