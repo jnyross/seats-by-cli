@@ -6,7 +6,7 @@ Quota asks whether a search is allowed. It does not POST the search form and doe
 
 - `quota-json` returns `seatspy.quota.v1` with `can_search` true or false and exit 0.
 - `quota-missing` returns `SESSION_MISSING` and exit 1 when the jar is absent.
-- `quota-expired` returns `SESSION_EXPIRED` and exit 1 when the homepage still shows the login form.
+- `quota-expired` returns `SESSION_EXPIRED` and exit 1 when the homepage has an explicit `loggedIn: false` marker or its navigation shows `/auth/sign-in`.
 
 ## How to get to it (user POV)
 
@@ -28,6 +28,7 @@ Preconditions:
 
 ## Gotchas
 
+- The live homepage currently omits `loggedIn`. Signed-in navigation has `/user/account/` and omits `/auth/sign-in`.
 - `can_search` false is not a refusal. Exit 1 with `QUOTA_EXHAUSTED` is a search behavior, not a quota behavior.
 - Quota talks to the network. A missing jar is the only offline live miss. Do not invent a second config dir. The CLI has no `--home` flag.
 - Do not treat a pytest `SESSION_MISSING` case as a live quota proof.

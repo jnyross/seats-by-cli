@@ -13,7 +13,7 @@
 ### Lint / test / build / run
 
 - Lint: there is no dedicated linter configured (only `pytest` in `pyproject.toml`). Use `.venv/bin/python -m compileall seatspy tests scripts` as a syntax check.
-- Test: `.venv/bin/python -m pytest`. The suite (~57 tests) is fully offline and hits no network.
+- Test: `.venv/bin/python -m pytest`. The suite has about 60 tests, runs fully offline, and hits no network.
 - Build: editable install only (`pip install -e ".[dev]"`), already done by the startup install.
 - Run: `.venv/bin/python -m seatspy <login|quota|search> ...`. Stdout is one JSON object; stderr is one human line. Exit codes: `0` ok, `1` refused, `2` unexpected error.
 
@@ -23,11 +23,11 @@
 - The repo's `start` step (`bash scripts/cloud-env.sh wire`) reads `OP_SERVICE_ACCOUNT_TOKEN`. If that name is unset, it falls back to `ONEPASSWORDSA`. When both names are set, `OP_SERVICE_ACCOUNT_TOKEN` wins.
 - Without a token, `login` fails reading 1Password (exit `2`), and `quota`/`search` refuse with `SESSION_MISSING` (exit `1`) because there is no `~/.config/seatspy/cookies.txt`. These refusals are the app working correctly, not a crash.
 
-### Live-site drift: `quota`/`search` currently refuse `SESSION_EXPIRED` even when logged in
+### Homepage session detection
 
-- `seatspy login` succeeds (exit `0`, `stored: true`) and the resulting session is genuinely authenticated. `GET /api/can-search-availability?num_searches=1` returns `{"Result":true}` and `/user/account/` renders the logged-in page.
-- However, `quota` and `search` gate on `Site.home()` parsing a `loggedIn: true|false` marker from the homepage `/`. As of 2026-08, the live homepage no longer emits that marker at all, so `home().logged_in` is `False` and both commands refuse with `SESSION_EXPIRED` (exit `1`). A live `search` refuses at this preflight before POSTing, so it does not spend the weekly search quota (`search_consumed: false`).
-- This is upstream/app behavior, not an environment problem. Fixing it requires a code change to the homepage login-state detection.
+- `Site.home()` uses an explicit `loggedIn: true|false` marker when SeatSpy emits one.
+- The live homepage no longer emits that marker. The fallback treats the navigation as signed in when it has `/user/account/` and does not have `/auth/sign-in`.
+- Challenge markers still return `HomeBlocked`, which `quota` and `search` report as `BOT_BLOCKED`.
 
 ### Live-drive safety
 
