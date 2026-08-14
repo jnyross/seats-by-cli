@@ -30,7 +30,7 @@ install_op() {
 
 install_venv() {
 	if [ -x "$ROOT/.venv/bin/python" ]; then
-		"$ROOT/.venv/bin/python" -c "import seatspy" >/dev/null 2>&1 && return 0
+		(cd / && "$ROOT/.venv/bin/python" -c "import seatspy, pytest") >/dev/null 2>&1 && return 0
 	fi
 	if python3 -c "import ensurepip" >/dev/null 2>&1; then
 		python3 -m venv "$ROOT/.venv"
