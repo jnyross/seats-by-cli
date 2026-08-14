@@ -40,7 +40,7 @@ def main() -> int:
     dest = RUNS / f"{stamp}-{args.feature}"
     dest.mkdir(parents=True, exist_ok=True)
     LOCK.parent.mkdir(parents=True, exist_ok=True)
-    if _lock_held() or not _acquire():
+    if not _claim():
         (dest / "summary.json").write_text(
             json.dumps({"ok": False, "error": "live lock held; refuse second drive"}, indent=2)
         )
@@ -79,22 +79,52 @@ def main() -> int:
     return 0 if summary.get("ok") else 1
 
 
+def _claim() -> bool:
+    if _acquire():
+        return True
+    pid, status = _inspect()
+    if status == "ours":
+        return True
+    if status == "missing":
+        return _acquire()
+    if status == "dead":
+        if pid is None or not _unlink_if_pid(pid):
+            return False
+        return _acquire()
+    return False
+
+
 def _lock_held() -> bool:
-    if not LOCK.exists():
-        return False
-    raw = LOCK.read_text().strip()
+    _, status = _inspect()
+    return status == "held"
+
+
+def _inspect() -> tuple[int | None, str]:
+    try:
+        raw = LOCK.read_text().strip()
+    except FileNotFoundError:
+        return None, "missing"
     try:
         pid = int(raw)
     except ValueError:
-        return True
+        return None, "held"
     if pid == os.getpid():
-        return False
+        return pid, "ours"
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
-        LOCK.unlink()
-        return False
+        return pid, "dead"
     except OSError:
+        return pid, "held"
+    return pid, "held"
+
+
+def _unlink_if_pid(pid: int) -> bool:
+    try:
+        if LOCK.read_text().strip() != str(pid):
+            return False
+        LOCK.unlink()
+    except FileNotFoundError:
         return True
     return True
 

@@ -55,7 +55,8 @@ def test_missing_pid_is_stale(tmp_path: Path, monkeypatch) -> None:
 
     monkeypatch.setattr(os, "kill", gone)
     assert run._lock_held() is False
-    assert not lock.exists()
+    assert run._claim() is True
+    assert lock.read_text().strip() == str(os.getpid())
 
 
 def test_empty_lock_is_held(tmp_path: Path, monkeypatch) -> None:
@@ -73,6 +74,25 @@ def test_unreadable_lock_is_held(tmp_path: Path, monkeypatch) -> None:
     lock.write_text("not-a-pid\n")
     monkeypatch.setattr(run, "LOCK", lock)
     assert run._lock_held() is True
+    assert lock.exists()
+
+
+def test_replaced_lock_is_not_unlinked(tmp_path: Path, monkeypatch) -> None:
+    run = _load(_RUN, "verify_run")
+    lock = tmp_path / "live.lock"
+    lock.write_text("12345\n")
+    monkeypatch.setattr(run, "LOCK", lock)
+    lock.write_text(f"{os.getpid()}\n")
+    assert run._unlink_if_pid(12345) is False
+    assert lock.read_text().strip() == str(os.getpid())
+
+
+def test_empty_lock_blocks_claim(tmp_path: Path, monkeypatch) -> None:
+    run = _load(_RUN, "verify_run")
+    lock = tmp_path / "live.lock"
+    lock.write_text("")
+    monkeypatch.setattr(run, "LOCK", lock)
+    assert run._claim() is False
     assert lock.exists()
 
 
