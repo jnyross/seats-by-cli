@@ -378,8 +378,14 @@ def _parse_day(raw: object) -> date | None:
         return None
     slash = _SLASH_DATE.fullmatch(raw)
     if slash:
-        return date(int(slash.group(1)), int(slash.group(2)), int(slash.group(3)))
-    parsed = email.utils.parsedate_to_datetime(raw)
+        try:
+            return date(int(slash.group(1)), int(slash.group(2)), int(slash.group(3)))
+        except ValueError:
+            return None
+    try:
+        parsed = email.utils.parsedate_to_datetime(raw)
+    except (TypeError, ValueError):
+        return None
     if parsed is None:
         return None
     if parsed.tzinfo is None:

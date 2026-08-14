@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from seatspy.account import Account
-from seatspy.site import HomePage, parse_routes
+from seatspy.site import HomePage, SearchPosted, _parse_day, _year_snapshot, parse_routes
 from seatspy.types import (
     Cabin,
     CabinDay,
@@ -21,6 +21,7 @@ from seatspy.types import (
     SearchRefused,
     Stage,
     YearDay,
+    YearIncomplete,
     YearSnapshot,
     cabin_status,
     preflight_block,
@@ -162,3 +163,60 @@ def test_preflight_block_stages() -> None:
         "can_search": True,
         "route_supported": True,
     }
+
+
+def test_parse_day_accepts_site_formats_and_skips_unreadables() -> None:
+    assert _parse_day("2026/08/14") == date(2026, 8, 14)
+    assert _parse_day("Sat, 15 Aug 2026 00:00:00 GMT") == date(2026, 8, 15)
+    assert _parse_day("2026-09-01") is None
+    assert _parse_day("2026/13/40") is None
+    assert _parse_day("") is None
+    assert _parse_day(None) is None
+
+
+def test_unreadable_coverage_dates_are_year_incomplete() -> None:
+    raised = False
+    try:
+        _year_snapshot({"earliestDate": "2026-09-01", "latestDate": "2026/10/01"})
+    except YearIncomplete:
+        raised = True
+    assert raised
+
+
+def test_unreadable_day_dates_are_skipped() -> None:
+    snapshot = _year_snapshot(
+        {
+            "earliestDate": "2026/08/14",
+            "latestDate": "2026/10/01",
+            "dates": [
+                {"startDate": "2026-09-01", "flights": [{"business": 4}]},
+                {"startDate": "Sat, 12 Sep 2026 00:00:00 GMT", "flights": [{"business": 4}]},
+            ],
+        }
+    )
+    assert [day.date for day in snapshot.days] == [date(2026, 9, 12)]
+
+
+class _Resolves:
+    def resolve(self, query: Query) -> object:
+        return query
+
+
+def test_unreadable_year_calendar_after_post_is_parse_failed(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
+    monkeypatch.setattr(
+        "seatspy.account.Site.home",
+        lambda self: HomePage(logged_in=True, csrf=Csrf("token"), routes=_Resolves()),  # type: ignore[arg-type]
+    )
+    monkeypatch.setattr("seatspy.account.Site.can_search", lambda self: True)
+    monkeypatch.setattr("seatspy.account.Site.submit_search", lambda self, csrf, route: SearchPosted())
+
+    def fail_calendar(self, route):
+        raise YearIncomplete
+
+    monkeypatch.setattr("seatspy.account.Site.year_calendar", fail_calendar)
+    outcome = Account(Paths(tmp_path)).search(_query())
+    assert isinstance(outcome, SearchRefused)
+    assert outcome.refusal.code is RefusalCode.PARSE_FAILED
+    assert outcome.stage is Stage.SEARCHING
+    assert outcome.meta.search_consumed is True
