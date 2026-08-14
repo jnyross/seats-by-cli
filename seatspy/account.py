@@ -4,7 +4,15 @@ from datetime import datetime, timezone
 
 from seatspy.credentials import read_login
 from seatspy.session import SessionStore
-from seatspy.site import SearchBlocked, SearchExpired, SearchPosted, SignInBlocked, SignInOk, Site
+from seatspy.site import (
+    HomeBlocked,
+    SearchBlocked,
+    SearchExpired,
+    SearchPosted,
+    SignInBlocked,
+    SignInOk,
+    Site,
+)
 from seatspy.types import (
     Calendar,
     CalendarHow,
@@ -65,7 +73,10 @@ class Account:
         if not self.paths.cookies.exists():
             return QuotaRefused(_SESSION_MISSING)
         site = Site(self.paths.cookies)
-        if not site.home().logged_in:
+        home = site.home()
+        if isinstance(home, HomeBlocked):
+            return QuotaRefused(_BOT_BLOCKED)
+        if not home.logged_in:
             return QuotaRefused(_SESSION_EXPIRED)
         return QuotaOk(site.can_search())
 
@@ -74,6 +85,8 @@ class Account:
             return _refuse(query, _SESSION_MISSING, Stage.SESSION, consumed=False)
         site = Site(self.paths.cookies)
         home = site.home()
+        if isinstance(home, HomeBlocked):
+            return _refuse(query, _BOT_BLOCKED, Stage.SESSION, consumed=False)
         if not home.logged_in:
             return _refuse(query, _SESSION_EXPIRED, Stage.SESSION, consumed=False)
         if not site.can_search():

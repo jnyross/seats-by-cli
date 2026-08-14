@@ -5,7 +5,16 @@ from datetime import date
 from pathlib import Path
 
 from seatspy.account import Account
-from seatspy.site import HomePage, SearchFailed, SearchPosted, Site, _parse_day, _year_snapshot, parse_routes
+from seatspy.site import (
+    HomeBlocked,
+    HomePage,
+    SearchFailed,
+    SearchPosted,
+    Site,
+    _parse_day,
+    _year_snapshot,
+    parse_routes,
+)
 from seatspy.types import (
     Cabin,
     CabinDay,
@@ -128,6 +137,31 @@ def test_dry_run_does_not_submit_search(tmp_path: Path, monkeypatch) -> None:
     assert payload["status"] == "ok"
     assert payload["calendar"]["days"] == []
     assert payload["meta"]["search_consumed"] is False
+
+
+def test_search_home_challenge_is_bot_blocked(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
+    monkeypatch.setattr("seatspy.account.Site.home", lambda self: HomeBlocked())
+
+    def fail_quota(self):
+        raise AssertionError("can_search should not run on a challenge page")
+
+    monkeypatch.setattr("seatspy.account.Site.can_search", fail_quota)
+    outcome = Account(Paths(tmp_path)).search(_query())
+    assert isinstance(outcome, SearchRefused)
+    assert outcome.refusal.code is RefusalCode.BOT_BLOCKED
+    assert outcome.stage is Stage.SESSION
+    assert outcome.meta.search_consumed is False
+
+
+def test_home_challenge_html_is_blocked(monkeypatch) -> None:
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(
+        site,
+        "_request",
+        lambda *args, **kwargs: (200, b"<html>g-recaptcha</html>", "https://www.seatspy.com/"),
+    )
+    assert isinstance(site.home(), HomeBlocked)
 
 
 def test_unreadable_route_table_is_parse_failed(tmp_path: Path, monkeypatch) -> None:

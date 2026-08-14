@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from seatspy.account import Account
-from seatspy.site import HomePage, SignInBlocked, SignInFormRemained
+from seatspy.site import HomeBlocked, HomePage, SignInBlocked, SignInFormRemained
 from seatspy.types import (
     LoginRefused,
     Password,
@@ -20,6 +20,20 @@ def test_missing_jar_is_session_missing(tmp_path: Path) -> None:
     outcome = Account(Paths(tmp_path)).quota()
     assert isinstance(outcome, QuotaRefused)
     assert outcome.refusal.code is RefusalCode.SESSION_MISSING
+    assert outcome.exit_code == 1
+
+
+def test_quota_home_challenge_is_bot_blocked(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
+    monkeypatch.setattr("seatspy.account.Site.home", lambda self: HomeBlocked())
+
+    def fail_quota(self):
+        raise AssertionError("can_search should not run on a challenge page")
+
+    monkeypatch.setattr("seatspy.account.Site.can_search", fail_quota)
+    outcome = Account(Paths(tmp_path)).quota()
+    assert isinstance(outcome, QuotaRefused)
+    assert outcome.refusal.code is RefusalCode.BOT_BLOCKED
     assert outcome.exit_code == 1
 
 

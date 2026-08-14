@@ -83,6 +83,14 @@ class HomePage:
     routes: RouteBook | None = None
 
 
+@dataclass(frozen=True)
+class HomeBlocked:
+    pass
+
+
+HomeResult = HomePage | HomeBlocked
+
+
 class Site:
     ORIGIN = "https://www.seatspy.com"
     # Empty or Python UA gets a challenge page.
@@ -133,9 +141,11 @@ class Site:
         self._jar = jar
         return SignInOk()
 
-    def home(self) -> HomePage:
+    def home(self) -> HomeResult:
         _, body, _ = self._request("GET", "/")
         html = body.decode("utf-8", "replace")
+        if _blocked(html):
+            return HomeBlocked()
         match = _CSRF.search(html)
         csrf = Csrf(match.group(1)) if match else Csrf("")
         return HomePage(
