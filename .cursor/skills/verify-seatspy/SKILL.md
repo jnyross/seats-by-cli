@@ -32,7 +32,7 @@ Teardown is process exit. Do not kill by name. Do not delete `~/.config/seatspy/
 
 Worth driving when `ok` is true, `import_ok` is true, and `help.login`, `help.quota`, and `help.search` are 0. `cookies_exist` false means live quota and search will refuse `SESSION_MISSING` until login. `live_lock.alive` true means another drive owns the jar. Stop.
 
-Doctor never prints the 1Password token or cookie values. It only reports whether those files exist.
+Doctor never prints the 1Password token or cookie values. It reports `token_source` (`env:OP_SERVICE_ACCOUNT_TOKEN`, `env:ONEPASSWORDSA`, `file`, or `none`), `token_exist`, and `token_file_exist`. It never reads token file bytes. John adds a Cursor Runtime Secret named `OP_SERVICE_ACCOUNT_TOKEN` (or the existing `ONEPASSWORDSA`). That is a Runtime Secret, not an Environment Variable. There is no `seatspy setup` prompt and nothing copies the secret onto disk. A laptop file and desktop `op` still work.
 
 ## Drive
 
