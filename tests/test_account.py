@@ -37,6 +37,23 @@ def test_quota_home_challenge_is_bot_blocked(tmp_path: Path, monkeypatch) -> Non
     assert outcome.exit_code == 1
 
 
+def test_quota_anonymous_home_is_session_expired(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
+    monkeypatch.setattr(
+        "seatspy.account.Site.home",
+        lambda self: HomePage(logged_in=False),
+    )
+
+    def fail_quota(self):
+        raise AssertionError("can_search should not run when signed out")
+
+    monkeypatch.setattr("seatspy.account.Site.can_search", fail_quota)
+    outcome = Account(Paths(tmp_path)).quota()
+    assert isinstance(outcome, QuotaRefused)
+    assert outcome.refusal.code is RefusalCode.SESSION_EXPIRED
+    assert outcome.exit_code == 1
+
+
 def test_quota_ok_false_is_success(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
     monkeypatch.setattr("seatspy.account.Site.home", lambda self: HomePage(logged_in=True))
