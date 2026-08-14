@@ -24,7 +24,7 @@ install_op() {
 	if [ -w /usr/local/bin ]; then
 		cp "$tmpdir/op" /usr/local/bin/op
 	else
-		sudo cp "$tmpdir/op" /usr/local/bin/op
+		sudo -n cp "$tmpdir/op" /usr/local/bin/op
 	fi
 }
 
@@ -60,8 +60,8 @@ wire_token() {
 
 case "${1:-}" in
 install)
-	install_op
 	install_venv
+	install_op
 	;;
 wire)
 	wire_token
