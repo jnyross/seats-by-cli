@@ -29,7 +29,9 @@ def main() -> int:
         "import_ok": False,
         "help": {},
         "cookies_exist": COOKIES.exists(),
-        "token_exist": TOKEN.exists(),
+        "token_file_exist": TOKEN.exists(),
+        "token_source": "none",
+        "token_exist": False,
         "live_lock": None,
         "ok": False,
     }
@@ -40,6 +42,13 @@ def main() -> int:
         print(json.dumps(report, indent=2))
         return 1
     report["import_ok"] = True
+    from seatspy.credentials import EnvToken, FileToken, resolve_token_source
+
+    source = resolve_token_source(TOKEN)
+    report["token_source"] = source.describe()
+    report["token_exist"] = isinstance(source, EnvToken) or (
+        isinstance(source, FileToken) and not source.empty
+    )
 
     help_ok = True
     for command in ("login", "quota", "search"):

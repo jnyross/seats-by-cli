@@ -19,7 +19,7 @@ Login signs John into seatspy.com through `op` and stores only a cookie jar. It 
 Preconditions:
 
 - Doctor reports `ok` true.
-- `~/.config/seatspy/op-service-account-token` exists, or desktop `op` is already signed in. On cloud agents, `scripts/cloud-env.sh wire` reads `OP_SERVICE_ACCOUNT_TOKEN` first and falls back to `ONEPASSWORDSA`.
+- A Cursor Runtime Secret named `OP_SERVICE_ACCOUNT_TOKEN` (or `ONEPASSWORDSA`) is set, or `~/.config/seatspy/op-service-account-token` exists, or desktop `op` is already signed in. Doctor reports `token_source`. It never prints the value.
 - No other live drive holds `~/.config/seatspy/live.lock`.
 
 - **Help.** Show usage. Run `.venv/bin/python .cursor/skills/verify-seatspy/scripts/run.py --feature login-help -- login --help`. Exit code `0` is not required from the helper (help is not JSON). `stderr.txt` or `stdout.txt` contains `usage: seatspy login`.
