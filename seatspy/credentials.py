@@ -67,7 +67,7 @@ def _bind_child_env(
     if isinstance(source, NoToken):
         return child
     if isinstance(source, EnvToken):
-        child["OP_SERVICE_ACCOUNT_TOKEN"] = parent[source.name]
+        child["OP_SERVICE_ACCOUNT_TOKEN"] = parent[source.name].strip()
     else:
         text = token_file.read_text().strip()
         if not text:

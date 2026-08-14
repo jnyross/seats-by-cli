@@ -78,6 +78,18 @@ def test_missing_op_is_transport_error(tmp_path: Path, monkeypatch) -> None:
         read_login(tmp_path / "missing-token", environ={})
 
 
+def test_padded_env_token_is_stripped_for_op(tmp_path: Path, monkeypatch) -> None:
+    seen: dict[str, object] = {}
+    monkeypatch.setattr(subprocess, "run", _fake_op(seen))
+    read_login(
+        tmp_path / "missing-token",
+        environ={"ONEPASSWORDSA": f"  {_SECRET}  \n"},
+    )
+    env = seen["env"]
+    assert isinstance(env, dict)
+    assert env["OP_SERVICE_ACCOUNT_TOKEN"] == _SECRET
+
+
 def test_alias_env_reaches_child_only(tmp_path: Path, monkeypatch) -> None:
     seen: dict[str, object] = {}
     monkeypatch.setattr(subprocess, "run", _fake_op(seen))
