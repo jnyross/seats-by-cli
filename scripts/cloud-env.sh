@@ -4,6 +4,7 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 OP_VER="2.38.1"
 OP_ARCH="amd64"
+OP_SHA256="7a7b7168f521d31838f0cc59abf172527853308c9b9cceee34895121acb0be0f"
 TOKEN_PATH="${HOME}/.config/seatspy/op-service-account-token"
 
 install_op() {
@@ -13,18 +14,23 @@ install_op() {
 	tmpdir="$(mktemp -d)"
 	trap 'rm -rf "$tmpdir"' EXIT
 	curl -fsSL "https://cache.agilebits.com/dist/1P/op2/pkg/v${OP_VER}/op_linux_${OP_ARCH}_v${OP_VER}.zip" -o "$tmpdir/op.zip"
+	actual_sha256="$(python3 -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$tmpdir/op.zip")"
+	if [ "$actual_sha256" != "$OP_SHA256" ]; then
+		echo "1Password CLI archive checksum mismatch." >&2
+		return 1
+	fi
 	python3 -c "import zipfile; zipfile.ZipFile('$tmpdir/op.zip').extract('op', '$tmpdir')"
 	chmod 755 "$tmpdir/op"
 	if [ -w /usr/local/bin ]; then
 		cp "$tmpdir/op" /usr/local/bin/op
 	else
-		sudo cp "$tmpdir/op" /usr/local/bin/op
+		sudo -n cp "$tmpdir/op" /usr/local/bin/op
 	fi
 }
 
 install_venv() {
 	if [ -x "$ROOT/.venv/bin/python" ]; then
-		"$ROOT/.venv/bin/python" -c "import seatspy" >/dev/null 2>&1 && return 0
+		(cd / && "$ROOT/.venv/bin/python" -c "import seatspy, pytest") >/dev/null 2>&1 && return 0
 	fi
 	if python3 -c "import ensurepip" >/dev/null 2>&1; then
 		python3 -m venv "$ROOT/.venv"
@@ -54,8 +60,8 @@ wire_token() {
 
 case "${1:-}" in
 install)
-	install_op
 	install_venv
+	install_op
 	;;
 wire)
 	wire_token
