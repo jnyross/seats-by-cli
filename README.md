@@ -4,8 +4,26 @@ A personal CLI for a SeatSpy account. Stdout is one JSON object. Stderr is one h
 
 ## Install
 
+On another machine, install a release wheel, then confirm the version:
+
+```
+gh release download v0.1.0 --repo jnyross/seats-by-cli --pattern "*.whl" --dir /tmp
+pip install /tmp/seatspy-0.1.0-py3-none-any.whl
+seatspy --version
+```
+
+`--version` needs no subcommand. It prints the installed PEP 440 version, such as `0.1.0`.
+
+For development, install editable:
+
 ```
 pip install -e .
+```
+
+To cut a release, tag the commit. Do not edit a version field.
+
+```
+git tag v0.1.0 && git push origin v0.1.0
 ```
 
 To run the tests:
