@@ -1,10 +1,14 @@
 from seatspy.account import Account
 from seatspy.types import (
     Airline,
+    Appeared,
     Cabin,
     Calendar,
     DateWindow,
     Day,
+    DiffChanged,
+    DiffNoPrevious,
+    DiffUnchanged,
     Direction,
     Iata,
     LoginOk,
@@ -18,15 +22,21 @@ from seatspy.types import (
     SearchDryRun,
     SearchOk,
     SearchRefused,
+    StatusChanged,
+    Vanished,
 )
 
 __all__ = [
     "Account",
     "Airline",
+    "Appeared",
     "Cabin",
     "Calendar",
     "DateWindow",
     "Day",
+    "DiffChanged",
+    "DiffNoPrevious",
+    "DiffUnchanged",
     "Direction",
     "Iata",
     "LoginOk",
@@ -40,4 +50,6 @@ __all__ = [
     "SearchDryRun",
     "SearchOk",
     "SearchRefused",
+    "StatusChanged",
+    "Vanished",
 ]

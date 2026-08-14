@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from seatspy.credentials import read_login
 from seatspy.session import SessionStore
+from seatspy.snapshots import SnapshotStore
 from seatspy.site import (
     HomeBlocked,
     SearchBlocked,
@@ -120,12 +122,17 @@ class Account:
             snapshot = site.year_calendar(resolved)
         except YearIncomplete:
             return _refuse(query, _PARSE_FAILED, Stage.SEARCHING, consumed=True)
-        return SearchOk(
+        ok = SearchOk(
             query=query,
             provenance=Provenance(SearchHow.HTTP_FORM_POST, CalendarHow.HTTP_PARSE),
             calendar=snapshot.project(query),
             meta=_meta(consumed=True),
         )
+        try:
+            SnapshotStore(self.paths).record(ok)
+        except OSError:
+            return replace(ok, stored=False)
+        return ok
 
 
 def _meta(*, consumed: bool) -> Meta:
