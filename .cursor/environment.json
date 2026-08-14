@@ -1,0 +1,4 @@
+{
+  "install": "bash scripts/cloud-env.sh install",
+  "start": "bash scripts/cloud-env.sh wire"
+}
