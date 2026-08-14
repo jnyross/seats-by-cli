@@ -17,19 +17,17 @@
 - Build: editable install only (`pip install -e ".[dev]"`), already done by the startup install.
 - Run: `.venv/bin/python -m seatspy <login|quota|search> ...`. Stdout is one JSON object; stderr is one human line. Exit codes: `0` ok, `1` refused, `2` unexpected error.
 
-### Live commands need the 1Password secret (non-obvious gotcha)
+### Live commands need the 1Password secret
 
 - `login`, and any logged-in `quota`/`search`, need a 1Password service-account token written to `~/.config/seatspy/op-service-account-token`. That file is git-ignored and does not survive into a fresh VM.
-- The token is provided as the Cursor secret **`ONEPASSWORDSA`**, but the repo's `start` step (`bash scripts/cloud-env.sh wire`) and README look for `OP_SERVICE_ACCOUNT_TOKEN`. So the automatic startup wire does **not** find it. Wire it manually with:
-  `OP_SERVICE_ACCOUNT_TOKEN="$ONEPASSWORDSA" bash scripts/cloud-env.sh wire`
-  (Renaming the Cursor secret to `OP_SERVICE_ACCOUNT_TOKEN` would let the built-in `start` step wire it automatically.)
+- The repo's `start` step (`bash scripts/cloud-env.sh wire`) reads `OP_SERVICE_ACCOUNT_TOKEN`. If that name is unset, it falls back to `ONEPASSWORDSA`. When both names are set, `OP_SERVICE_ACCOUNT_TOKEN` wins.
 - Without a token, `login` fails reading 1Password (exit `2`), and `quota`/`search` refuse with `SESSION_MISSING` (exit `1`) because there is no `~/.config/seatspy/cookies.txt`. These refusals are the app working correctly, not a crash.
 
 ### Live-site drift: `quota`/`search` currently refuse `SESSION_EXPIRED` even when logged in
 
-- `seatspy login` succeeds (exit `0`, `stored: true`) and the resulting session is genuinely authenticated — `GET /api/can-search-availability?num_searches=1` returns `{"Result":true}` and `/user/account/` renders the logged-in page.
-- However, `quota` and `search` gate on `Site.home()` parsing a `loggedIn: true|false` marker from the homepage `/`. As of 2026-08, the live homepage no longer emits that marker at all, so `home().logged_in` is `False` and both commands refuse with `SESSION_EXPIRED` (exit `1`). A live `search` refuses at this preflight before POSTing, so it does **not** spend the weekly search quota (`search_consumed: false`).
-- This is upstream/app behavior, not an environment problem; fixing it would require a code change to the homepage login-state detection.
+- `seatspy login` succeeds (exit `0`, `stored: true`) and the resulting session is genuinely authenticated. `GET /api/can-search-availability?num_searches=1` returns `{"Result":true}` and `/user/account/` renders the logged-in page.
+- However, `quota` and `search` gate on `Site.home()` parsing a `loggedIn: true|false` marker from the homepage `/`. As of 2026-08, the live homepage no longer emits that marker at all, so `home().logged_in` is `False` and both commands refuse with `SESSION_EXPIRED` (exit `1`). A live `search` refuses at this preflight before POSTing, so it does not spend the weekly search quota (`search_consumed: false`).
+- This is upstream/app behavior, not an environment problem. Fixing it requires a code change to the homepage login-state detection.
 
 ### Live-drive safety
 

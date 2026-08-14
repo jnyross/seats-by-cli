@@ -38,15 +38,17 @@ install_venv() {
 wire_token() {
 	mkdir -p "${HOME}/.config/seatspy"
 	chmod 700 "${HOME}/.config/seatspy"
-	if [ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" ]; then
-		echo "OP_SERVICE_ACCOUNT_TOKEN is unset. Add that Cursor secret and restart." >&2
+	token="${OP_SERVICE_ACCOUNT_TOKEN:-${ONEPASSWORDSA:-}}"
+	if [ -z "$token" ]; then
+		echo "OP_SERVICE_ACCOUNT_TOKEN and ONEPASSWORDSA are unset. Add one Cursor secret and restart." >&2
 		return 0
 	fi
 	umask 077
 	tmp="${TOKEN_PATH}.tmp"
-	printf '%s\n' "$OP_SERVICE_ACCOUNT_TOKEN" >"$tmp"
+	printf '%s\n' "$token" >"$tmp"
 	chmod 600 "$tmp"
 	mv "$tmp" "$TOKEN_PATH"
+	unset token
 	echo "Wrote service-account token file." >&2
 }
 

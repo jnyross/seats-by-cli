@@ -15,7 +15,7 @@ pip install -e ".[dev]"
 python -m pytest
 ```
 
-If `op` should use a service account, put the token in `~/.config/seatspy/op-service-account-token`. Skip that file when `op` is already signed in. Cloud agents read the Cursor secret `OP_SERVICE_ACCOUNT_TOKEN` and write that file on start.
+If `op` should use a service account, put the token in `~/.config/seatspy/op-service-account-token`. Skip that file when `op` is already signed in. Cloud agents write that file on start from `OP_SERVICE_ACCOUNT_TOKEN`, or from `ONEPASSWORDSA` when the standard name is unset.
 
 ## Sign in
 
