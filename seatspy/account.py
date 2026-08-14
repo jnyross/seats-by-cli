@@ -47,6 +47,7 @@ _ROUTE_UNSUPPORTED = Refusal(RefusalCode.ROUTE_UNSUPPORTED, "SeatSpy does not se
 _QUOTA_EXHAUSTED = Refusal(RefusalCode.QUOTA_EXHAUSTED, "No searches left this week.")
 _PARSE_FAILED = Refusal(RefusalCode.PARSE_FAILED, "Year calendar did not complete.")
 _ROUTE_PARSE_FAILED = Refusal(RefusalCode.PARSE_FAILED, "Route table could not be read.")
+_CSRF_PARSE_FAILED = Refusal(RefusalCode.PARSE_FAILED, "Search form token could not be read.")
 _SOURCE = "https://www.seatspy.com"
 
 
@@ -106,6 +107,8 @@ class Account:
                 calendar=empty,
                 meta=_meta(consumed=False),
             )
+        if not home.csrf.reveal():
+            return _refuse(query, _CSRF_PARSE_FAILED, Stage.UNKNOWN, consumed=False)
         posted = site.submit_search(home.csrf, resolved)
         if isinstance(posted, SearchExpired):
             return _refuse(query, _SESSION_EXPIRED, Stage.SESSION, consumed=False)

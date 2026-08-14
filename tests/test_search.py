@@ -164,6 +164,97 @@ def test_home_challenge_html_is_blocked(monkeypatch) -> None:
     assert isinstance(site.home(), HomeBlocked)
 
 
+def test_empty_csrf_is_parse_failed_before_post(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
+    book = parse_routes(FIXTURE.read_text())
+    monkeypatch.setattr(
+        "seatspy.account.Site.home",
+        lambda self: HomePage(logged_in=True, csrf=Csrf(""), routes=book),
+    )
+    monkeypatch.setattr("seatspy.account.Site.can_search", lambda self: True)
+
+    def fail_post(self, csrf, route) -> None:
+        raise AssertionError("submit_search should not run without a CSRF token")
+
+    monkeypatch.setattr("seatspy.account.Site.submit_search", fail_post)
+    outcome = Account(Paths(tmp_path)).search(_query())
+    assert isinstance(outcome, SearchRefused)
+    assert outcome.refusal.code is RefusalCode.PARSE_FAILED
+    assert outcome.refusal.message == "Search form token could not be read."
+    assert outcome.stage is Stage.UNKNOWN
+    assert outcome.meta.search_consumed is False
+
+
+def test_home_logged_in_false_is_signed_out(monkeypatch) -> None:
+    html = (
+        b"<html><script>window.jsData = { loggedIn: false, subscriber: false, "
+        b'newRouteDictionaryAll: {} }</script></html>'
+    )
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is False
+
+
+def test_home_logged_in_true_with_token_is_signed_in(monkeypatch) -> None:
+    html = (
+        b'<html><input name="csrf_token" value="tok">'
+        b"<script>window.jsData = { loggedIn: true, subscriber: true }</script></html>"
+    )
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is True
+    assert home.csrf.reveal() == "tok"
+
+
+def test_home_subscriber_false_with_session_is_signed_in(monkeypatch) -> None:
+    html = (
+        b'<html><input name="csrf_token" value="tok">'
+        b"<script>window.jsData = { loggedIn: true, subscriber: false }</script></html>"
+    )
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is True
+
+
+def test_home_quoted_logged_in_is_signed_in(monkeypatch) -> None:
+    html = (
+        b'<html><input name="csrf_token" value="tok">'
+        b'<script>window.jsData = { "loggedIn": true, "subscriber": true }</script></html>'
+    )
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is True
+
+
+def test_home_missing_session_flag_is_signed_out(monkeypatch) -> None:
+    html = b'<html><input name="csrf_token" value="tok"><a href="/auth/sign-in">Sign in</a></html>'
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is False
+
+
+def test_home_fixture_is_signed_in(monkeypatch) -> None:
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(
+        site,
+        "_request",
+        lambda *args, **kwargs: (200, FIXTURE.read_bytes(), "https://www.seatspy.com/"),
+    )
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is True
+
+
 def test_unreadable_route_table_is_parse_failed(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
     monkeypatch.setattr(

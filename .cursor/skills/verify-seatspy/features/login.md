@@ -20,7 +20,7 @@ Preconditions:
 
 - Doctor reports `ok` true.
 - `~/.config/seatspy/op-service-account-token` exists, or desktop `op` is already signed in.
-- No other live drive holds `.verify/live.lock`.
+- No other live drive holds `~/.config/seatspy/live.lock`.
 
 - **Help.** Show usage. Run `.venv/bin/python .cursor/skills/verify-seatspy/scripts/run.py --feature login-help -- login --help`. Exit code `0` is not required from the helper (help is not JSON). `stderr.txt` or `stdout.txt` contains `usage: seatspy login`.
 - **Sign in.** Store a session. Run `.venv/bin/python .cursor/skills/verify-seatspy/scripts/run.py --feature login-ok -- login --json`. `summary.json` has `schema` `seatspy.login.v1`, `status` `ok`, `stored` true, `exit_code` `0`, and `cookies_exist_after` true.

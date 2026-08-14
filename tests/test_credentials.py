@@ -10,6 +10,8 @@ import pytest
 from seatspy.credentials import read_login
 from seatspy.types import TransportError
 
+_CREDENTIALS = Path(__file__).resolve().parents[1] / "seatspy" / "credentials.py"
+
 
 def test_token_stays_in_child_env(tmp_path: Path, monkeypatch) -> None:
     token_file = tmp_path / "op-service-account-token"
@@ -32,6 +34,12 @@ def test_token_stays_in_child_env(tmp_path: Path, monkeypatch) -> None:
     assert username == "user@example.com"
     assert password.reveal() == "pw-secret"
     assert "pw-secret" not in repr(password)
+
+
+def test_read_login_does_not_log_secret_lengths() -> None:
+    source = _CREDENTIALS.read_text()
+    assert "password_len" not in source
+    assert "username_len" not in source
 
 
 def test_missing_op_is_transport_error(tmp_path: Path, monkeypatch) -> None:
