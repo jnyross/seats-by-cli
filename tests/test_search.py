@@ -185,9 +185,9 @@ def test_empty_csrf_is_parse_failed_before_post(tmp_path: Path, monkeypatch) -> 
     assert outcome.meta.search_consumed is False
 
 
-def test_home_subscriber_false_is_signed_out(monkeypatch) -> None:
+def test_home_logged_in_false_is_signed_out(monkeypatch) -> None:
     html = (
-        b"<html><script>window.jsData = { subscriber: false, "
+        b"<html><script>window.jsData = { loggedIn: false, subscriber: false, "
         b'newRouteDictionaryAll: {} }</script></html>'
     )
     site = Site(Path("unused-cookies"))
@@ -197,10 +197,10 @@ def test_home_subscriber_false_is_signed_out(monkeypatch) -> None:
     assert home.logged_in is False
 
 
-def test_home_subscriber_true_with_token_is_signed_in(monkeypatch) -> None:
+def test_home_logged_in_true_with_token_is_signed_in(monkeypatch) -> None:
     html = (
         b'<html><input name="csrf_token" value="tok">'
-        b"<script>window.jsData = { subscriber: true }</script></html>"
+        b"<script>window.jsData = { loggedIn: true, subscriber: true }</script></html>"
     )
     site = Site(Path("unused-cookies"))
     monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
@@ -210,13 +210,49 @@ def test_home_subscriber_true_with_token_is_signed_in(monkeypatch) -> None:
     assert home.csrf.reveal() == "tok"
 
 
-def test_home_missing_subscriber_is_signed_out(monkeypatch) -> None:
+def test_home_subscriber_false_with_session_is_signed_in(monkeypatch) -> None:
+    html = (
+        b'<html><input name="csrf_token" value="tok">'
+        b"<script>window.jsData = { loggedIn: true, subscriber: false }</script></html>"
+    )
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is True
+
+
+def test_home_quoted_logged_in_is_signed_in(monkeypatch) -> None:
+    html = (
+        b'<html><input name="csrf_token" value="tok">'
+        b'<script>window.jsData = { "loggedIn": true, "subscriber": true }</script></html>'
+    )
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is True
+
+
+def test_home_missing_session_flag_is_signed_out(monkeypatch) -> None:
     html = b'<html><input name="csrf_token" value="tok"><a href="/auth/sign-in">Sign in</a></html>'
     site = Site(Path("unused-cookies"))
     monkeypatch.setattr(site, "_request", lambda *args, **kwargs: (200, html, "https://www.seatspy.com/"))
     home = site.home()
     assert isinstance(home, HomePage)
     assert home.logged_in is False
+
+
+def test_home_fixture_is_signed_in(monkeypatch) -> None:
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(
+        site,
+        "_request",
+        lambda *args, **kwargs: (200, FIXTURE.read_bytes(), "https://www.seatspy.com/"),
+    )
+    home = site.home()
+    assert isinstance(home, HomePage)
+    assert home.logged_in is True
 
 
 def test_unreadable_route_table_is_parse_failed(tmp_path: Path, monkeypatch) -> None:
