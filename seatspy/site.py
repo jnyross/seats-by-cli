@@ -68,7 +68,12 @@ class SearchBlocked:
     pass
 
 
-SearchSubmit = SearchPosted | SearchExpired | SearchBlocked
+@dataclass(frozen=True)
+class SearchFailed:
+    pass
+
+
+SearchSubmit = SearchPosted | SearchExpired | SearchBlocked | SearchFailed
 
 
 @dataclass(frozen=True)
@@ -166,6 +171,8 @@ class Site:
             return SearchBlocked()
         if _LOGIN_FORM in html:
             return SearchExpired()
+        if status >= 400:
+            return SearchFailed()
         return SearchPosted()
 
     def year_calendar(self, route: ResolvedRoute) -> YearSnapshot:

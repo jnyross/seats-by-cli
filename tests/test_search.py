@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from seatspy.account import Account
-from seatspy.site import HomePage, SearchPosted, _parse_day, _year_snapshot, parse_routes
+from seatspy.site import HomePage, SearchFailed, SearchPosted, Site, _parse_day, _year_snapshot, parse_routes
 from seatspy.types import (
     Cabin,
     CabinDay,
@@ -222,3 +222,37 @@ def test_unreadable_year_calendar_after_post_is_parse_failed(tmp_path: Path, mon
     assert outcome.refusal.message == "Year calendar did not complete."
     assert outcome.stage is Stage.SEARCHING
     assert outcome.meta.search_consumed is True
+
+
+def test_submit_search_http_error_is_failed(monkeypatch) -> None:
+    book = parse_routes(FIXTURE.read_text())
+    resolved = book.resolve(_query())
+    assert not isinstance(resolved, RouteMiss)
+    site = Site(Path("unused-cookies"))
+    monkeypatch.setattr(
+        site,
+        "_request",
+        lambda *args, **kwargs: (500, b"upstream error", "https://www.seatspy.com/x"),
+    )
+    assert isinstance(site.submit_search(Csrf("token"), resolved), SearchFailed)
+
+
+def test_failed_search_post_is_parse_failed_unspent(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "cookies.txt").write_text("# Netscape HTTP Cookie File\n\n")
+    book = parse_routes(FIXTURE.read_text())
+    monkeypatch.setattr(
+        "seatspy.account.Site.home",
+        lambda self: HomePage(logged_in=True, csrf=Csrf("token"), routes=book),
+    )
+    monkeypatch.setattr("seatspy.account.Site.can_search", lambda self: True)
+    monkeypatch.setattr("seatspy.account.Site.submit_search", lambda self, csrf, route: SearchFailed())
+
+    def fail_calendar(self, route):
+        raise AssertionError("year_calendar should not run after a failed POST")
+
+    monkeypatch.setattr("seatspy.account.Site.year_calendar", fail_calendar)
+    outcome = Account(Paths(tmp_path)).search(_query())
+    assert isinstance(outcome, SearchRefused)
+    assert outcome.refusal.code is RefusalCode.PARSE_FAILED
+    assert outcome.stage is Stage.SEARCHING
+    assert outcome.meta.search_consumed is False
