@@ -31,6 +31,7 @@ from seatspy.types import (
 
 _LOGIN_FORM = 'id="login-form"'
 _CSRF = re.compile(r'name="csrf_token" value="([^"]+)"')
+_SUBSCRIBER = re.compile(r"\bsubscriber:\s*(true|false)\b")
 _BLOCKED = ("g-recaptcha", "h-captcha", "cf-turnstile", "challenge-platform")
 _SLASH_DATE = re.compile(r"^(\d{4})/(\d{2})/(\d{2})$")
 
@@ -149,7 +150,7 @@ class Site:
         match = _CSRF.search(html)
         csrf = Csrf(match.group(1)) if match else Csrf("")
         return HomePage(
-            logged_in=_LOGIN_FORM not in html,
+            logged_in=_subscriber(html) is True,
             csrf=csrf,
             routes=parse_routes(html),
         )
@@ -408,6 +409,13 @@ def _parse_day(raw: object) -> date | None:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.date()
+
+
+def _subscriber(html: str) -> bool | None:
+    match = _SUBSCRIBER.search(html)
+    if match is None:
+        return None
+    return match.group(1) == "true"
 
 
 def _blocked(html: str) -> bool:

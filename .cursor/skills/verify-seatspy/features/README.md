@@ -6,7 +6,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 
 - Install once with `python3 -m venv .venv` and `.venv/bin/pip install -e ".[dev]"`.
 - Run `.venv/bin/python .cursor/skills/verify-seatspy/scripts/doctor.py` and require `ok` true.
-- Live commands share `~/.config/seatspy/cookies.txt`. Do not start a second live drive while `.verify/live.lock` is held by a live pid.
+- Live commands share `~/.config/seatspy/cookies.txt`. Do not start a second live drive while `~/.config/seatspy/live.lock` is held by a live pid.
 - Prefer `--dry-run` for search unless the recipe is `search-live`.
 - Drive through `scripts/run.py`. Do not call `Account` for a live proof.
 
@@ -15,7 +15,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Start from the feature file's preconditions.
 - Treat every command as literal. Keep flag names and the BA LHR-JFK September 2026 example unchanged unless the recipe names another query.
 - Record the feature id in `--feature`.
-- Cleanup removes only `.verify/live.lock`. Proof directories stay.
+- Cleanup removes only `~/.config/seatspy/live.lock`. Proof directories stay.
 
 ## Proof and skip reporting
 

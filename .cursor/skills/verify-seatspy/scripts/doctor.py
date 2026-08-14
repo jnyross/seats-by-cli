@@ -15,7 +15,7 @@ PYTHON = VENV if VENV.exists() else Path(sys.executable)
 CONFIG = Path.home() / ".config" / "seatspy"
 COOKIES = CONFIG / "cookies.txt"
 TOKEN = CONFIG / "op-service-account-token"
-LOCK = ROOT / ".verify" / "live.lock"
+LOCK = CONFIG / "live.lock"
 
 
 def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -68,8 +68,10 @@ def main() -> int:
 def _pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
-    except OSError:
+    except ProcessLookupError:
         return False
+    except OSError:
+        return True
     return True
 
 

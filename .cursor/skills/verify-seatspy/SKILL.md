@@ -7,7 +7,7 @@ description: Drive the seatspy CLI the way John or an agent does (login, quota, 
 
 Primary surface is the `seatspy` CLI. Stdout is one JSON object. Stderr is one human line. Exit `0` ok, `1` refused, `2` unexpected. There is no server and no browser on the happy path.
 
-Live commands share `~/.config/seatspy/cookies.txt`. Do not run two live drives at once. `scripts/run.py` holds `.verify/live.lock` for the duration of one command. If doctor reports an alive lock, stop.
+Live commands share `~/.config/seatspy/cookies.txt`. Do not run two live drives at once. `scripts/run.py` holds `~/.config/seatspy/live.lock` for the duration of one command. If doctor reports an alive lock, stop.
 
 Read [features/README.md](features/README.md) before driving. A proof that hits one convenient command is incomplete when the map lists other entry points.
 
@@ -79,7 +79,7 @@ Proof standards:
 ## Cleanup
 
 ```
-rm -f .verify/live.lock
+rm -f ~/.config/seatspy/live.lock
 ```
 
 Only remove a lock this run created. Leave `.verify/runs/` in place. Leave the user's cookie jar in place. Leave `.venv` in place.

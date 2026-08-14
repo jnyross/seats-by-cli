@@ -15,8 +15,9 @@ ROOT = Path(__file__).resolve().parents[4]
 VENV = ROOT / ".venv" / "bin" / "python"
 PYTHON = VENV if VENV.exists() else Path(sys.executable)
 RUNS = ROOT / ".verify" / "runs"
-LOCK = ROOT / ".verify" / "live.lock"
-COOKIES = Path.home() / ".config" / "seatspy" / "cookies.txt"
+CONFIG = Path.home() / ".config" / "seatspy"
+COOKIES = CONFIG / "cookies.txt"
+LOCK = CONFIG / "live.lock"
 
 
 def main() -> int:
@@ -39,13 +40,12 @@ def main() -> int:
     dest = RUNS / f"{stamp}-{args.feature}"
     dest.mkdir(parents=True, exist_ok=True)
     LOCK.parent.mkdir(parents=True, exist_ok=True)
-    if _lock_held():
+    if _lock_held() or not _acquire():
         (dest / "summary.json").write_text(
             json.dumps({"ok": False, "error": "live lock held; refuse second drive"}, indent=2)
         )
         print(dest)
         return 2
-    LOCK.write_text(str(os.getpid()))
     cookies_before = COOKIES.exists()
     try:
         completed = subprocess.run(
@@ -86,14 +86,29 @@ def _lock_held() -> bool:
     try:
         pid = int(raw)
     except ValueError:
+        LOCK.unlink()
         return False
     if pid == os.getpid():
         return False
     try:
         os.kill(pid, 0)
-    except OSError:
+    except ProcessLookupError:
         LOCK.unlink()
         return False
+    except OSError:
+        return True
+    return True
+
+
+def _acquire() -> bool:
+    try:
+        fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        return False
+    try:
+        os.write(fd, f"{os.getpid()}\n".encode())
+    finally:
+        os.close(fd)
     return True
 
 

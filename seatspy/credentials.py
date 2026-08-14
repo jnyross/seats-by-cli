@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import logging
 import os
 import subprocess
 from pathlib import Path
 
 from seatspy.types import Password, TransportError
 
-_LOG = logging.getLogger(__name__)
 _ITEM = "seatspy.com"
 _VAULT = "Product Secrets"
 
@@ -23,7 +21,6 @@ def read_login(token_file: Path) -> tuple[str, Password]:
         env.pop("OP_CONNECT_TOKEN", None)
     username = _field("username", env)
     password = Password(_field("password", env))
-    _LOG.info("read login fields username_len=%s password_len=%s", len(username), len(password.reveal()))
     return username, password
 
 
