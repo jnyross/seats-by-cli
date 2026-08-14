@@ -86,8 +86,7 @@ def _lock_held() -> bool:
     try:
         pid = int(raw)
     except ValueError:
-        LOCK.unlink()
-        return False
+        return True
     if pid == os.getpid():
         return False
     try:

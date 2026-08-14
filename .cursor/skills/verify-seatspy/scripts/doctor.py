@@ -53,8 +53,10 @@ def main() -> int:
         try:
             pid = int(raw)
         except ValueError:
-            pid = None
-        alive = bool(pid) and _pid_alive(pid)
+            report["live_lock"] = {"pid": None, "alive": True}
+            print(json.dumps(report, indent=2))
+            return 1
+        alive = _pid_alive(pid)
         report["live_lock"] = {"pid": pid, "alive": alive}
         if alive:
             print(json.dumps(report, indent=2))

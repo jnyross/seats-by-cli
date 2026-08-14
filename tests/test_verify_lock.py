@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 
@@ -55,3 +56,31 @@ def test_missing_pid_is_stale(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(os, "kill", gone)
     assert run._lock_held() is False
     assert not lock.exists()
+
+
+def test_empty_lock_is_held(tmp_path: Path, monkeypatch) -> None:
+    run = _load(_RUN, "verify_run")
+    lock = tmp_path / "live.lock"
+    lock.write_text("")
+    monkeypatch.setattr(run, "LOCK", lock)
+    assert run._lock_held() is True
+    assert lock.exists()
+
+
+def test_unreadable_lock_is_held(tmp_path: Path, monkeypatch) -> None:
+    run = _load(_RUN, "verify_run")
+    lock = tmp_path / "live.lock"
+    lock.write_text("not-a-pid\n")
+    monkeypatch.setattr(run, "LOCK", lock)
+    assert run._lock_held() is True
+    assert lock.exists()
+
+
+def test_doctor_empty_lock_is_alive(tmp_path: Path, monkeypatch, capsys) -> None:
+    doctor = _load(_DOCTOR, "verify_doctor")
+    lock = tmp_path / "live.lock"
+    lock.write_text("")
+    monkeypatch.setattr(doctor, "LOCK", lock)
+    assert doctor.main() == 1
+    report = json.loads(capsys.readouterr().out)
+    assert report["live_lock"] == {"pid": None, "alive": True}
