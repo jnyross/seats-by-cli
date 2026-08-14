@@ -108,6 +108,70 @@ def test_login_version_is_unknown_argument() -> None:
     assert exc.value.code == 2
 
 
+def test_diff_help() -> None:
+    with pytest.raises(SystemExit) as exc:
+        build_parser().parse_args(["diff", "--help"])
+    assert exc.value.code == 0
+
+
+def test_diff_rejects_dry_run() -> None:
+    with pytest.raises(SystemExit) as exc:
+        build_parser().parse_args(
+            [
+                "diff",
+                "--airline",
+                "BA",
+                "--from",
+                "LHR",
+                "--to",
+                "JFK",
+                "--direction",
+                "one-way",
+                "--cabin",
+                "business",
+                "--from-date",
+                "2026-09-01",
+                "--to-date",
+                "2026-09-30",
+                "--dry-run",
+            ]
+        )
+    assert exc.value.code == 2
+
+
+def test_diff_parses_the_same_query_flags() -> None:
+    args = build_parser().parse_args(
+        [
+            "diff",
+            "--airline",
+            "BA",
+            "--from",
+            "LHR",
+            "--to",
+            "JFK",
+            "--direction",
+            "one-way",
+            "--cabin",
+            "business",
+            "--from-date",
+            "2026-09-01",
+            "--to-date",
+            "2026-09-30",
+            "--json",
+        ]
+    )
+    assert args.command == "diff"
+    assert args.airline == "BA"
+    assert args.origin == "LHR"
+    assert args.destination == "JFK"
+    assert args.direction == "one-way"
+    assert args.cabin == "business"
+    assert args.from_date == "2026-09-01"
+    assert args.to_date == "2026-09-30"
+    assert args.json is True
+    assert not hasattr(args, "dry_run")
+
+
 def test_search_parses_required_flags() -> None:
     args = build_parser().parse_args(
         [

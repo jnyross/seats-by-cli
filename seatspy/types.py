@@ -184,6 +184,19 @@ class Query:
             "to_date": self.window.end.isoformat(),
         }
 
+    @staticmethod
+    def from_dict(raw: object) -> Query:
+        body = _exact_object(raw, _QUERY_KEYS, "query")
+        return Query.parse(
+            airline=_text(body["airline"], "airline"),
+            origin=_text(body["origin"], "origin"),
+            destination=_text(body["destination"], "destination"),
+            direction=_text(body["direction"], "direction"),
+            cabin=_text(body["cabin"], "cabin"),
+            from_date=_text(body["from_date"], "from_date"),
+            to_date=_text(body["to_date"], "to_date"),
+        )
+
 
 @dataclass(frozen=True)
 class Refusal:
@@ -222,6 +235,18 @@ class CabinDay:
     def to_dict(self) -> dict[str, str]:
         return {"name": self.name.value, "status": self.status.value}
 
+    @staticmethod
+    def from_dict(raw: object) -> CabinDay:
+        body = _exact_object(raw, {"name", "status"}, "cabin")
+        try:
+            name = Cabin(_text(body["name"], "name"))
+            status = CabinStatus(_text(body["status"], "status"))
+        except ValueError as exc:
+            raise ValueError("cabin fields are invalid") from exc
+        if status is CabinStatus.NONE:
+            raise ValueError("stored cabin status cannot be none")
+        return CabinDay(name, status)
+
 
 @dataclass(frozen=True)
 class Day:
@@ -230,6 +255,100 @@ class Day:
 
     def to_dict(self) -> dict[str, object]:
         return {"date": self.date.isoformat(), "cabins": [cabin.to_dict() for cabin in self.cabins]}
+
+    @staticmethod
+    def from_dict(raw: object) -> Day:
+        body = _exact_object(raw, {"date", "cabins"}, "day")
+        try:
+            day = date.fromisoformat(_text(body["date"], "date"))
+        except ValueError as exc:
+            raise ValueError("day date is invalid") from exc
+        cabins_raw = body["cabins"]
+        if not isinstance(cabins_raw, list) or len(cabins_raw) != 1:
+            raise ValueError("day must carry exactly one cabin")
+        return Day(day, (CabinDay.from_dict(cabins_raw[0]),))
+
+
+@dataclass(frozen=True)
+class Appeared:
+    date: date
+    after: CabinStatus
+
+    def __post_init__(self) -> None:
+        if self.after is CabinStatus.NONE:
+            raise ValueError("appeared after must not be none")
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "date": self.date.isoformat(),
+            "change": "appeared",
+            "before": CabinStatus.NONE.value,
+            "after": self.after.value,
+        }
+
+
+@dataclass(frozen=True)
+class Vanished:
+    date: date
+    before: CabinStatus
+
+    def __post_init__(self) -> None:
+        if self.before is CabinStatus.NONE:
+            raise ValueError("vanished before must not be none")
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "date": self.date.isoformat(),
+            "change": "vanished",
+            "before": self.before.value,
+            "after": CabinStatus.NONE.value,
+        }
+
+
+@dataclass(frozen=True)
+class StatusChanged:
+    date: date
+    before: CabinStatus
+    after: CabinStatus
+
+    def __post_init__(self) -> None:
+        if self.before is CabinStatus.NONE or self.after is CabinStatus.NONE:
+            raise ValueError("status change cannot include none")
+        if self.before is self.after:
+            raise ValueError("status change requires different statuses")
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "date": self.date.isoformat(),
+            "change": "status_changed",
+            "before": self.before.value,
+            "after": self.after.value,
+        }
+
+
+DayChange = Appeared | Vanished | StatusChanged
+
+
+@dataclass(frozen=True)
+class ChangedDays:
+    first: DayChange
+    rest: tuple[DayChange, ...] = ()
+
+    def to_tuple(self) -> tuple[DayChange, ...]:
+        return (self.first, *self.rest)
+
+    def to_list(self) -> list[dict[str, str]]:
+        return [item.to_dict() for item in self.to_tuple()]
+
+
+@dataclass(frozen=True)
+class CalendarUnchanged:
+    pass
+
+
+@dataclass(frozen=True)
+class CalendarChanged:
+    changes: ChangedDays
 
 
 @dataclass(frozen=True)
@@ -240,10 +359,78 @@ class Calendar:
     def to_dict(self) -> dict[str, object]:
         return {"coverage": self.coverage, "days": [day.to_dict() for day in self.days]}
 
+    @staticmethod
+    def from_dict(raw: object) -> Calendar:
+        body = _exact_object(raw, {"coverage", "days"}, "calendar")
+        coverage = body["coverage"]
+        if coverage not in ("window", "partial"):
+            raise ValueError("coverage must be window or partial")
+        days_raw = body["days"]
+        if not isinstance(days_raw, list):
+            raise ValueError("days must be a list")
+        days = tuple(Day.from_dict(item) for item in days_raw)
+        seen = [day.date for day in days]
+        if len(seen) != len(set(seen)):
+            raise ValueError("calendar dates must be unique")
+        return Calendar(coverage, days)
+
+    def changes_since(self, previous: Calendar) -> CalendarUnchanged | CalendarChanged:
+        before = _status_by_date(previous)
+        after = _status_by_date(self)
+        found: list[DayChange] = []
+        for day in sorted(set(before) | set(after)):
+            left = before.get(day, _missing(previous.coverage))
+            right = after.get(day, _missing(self.coverage))
+            if left is right:
+                continue
+            if left is CabinStatus.NONE:
+                found.append(Appeared(day, right))
+            elif right is CabinStatus.NONE:
+                found.append(Vanished(day, left))
+            else:
+                found.append(StatusChanged(day, left, right))
+        if not found:
+            return CalendarUnchanged()
+        return CalendarChanged(ChangedDays(found[0], tuple(found[1:])))
+
+
+_QUERY_KEYS = {
+    "airline",
+    "origin",
+    "destination",
+    "direction",
+    "cabin",
+    "from_date",
+    "to_date",
+}
+_DIFF_META = {"search_consumed": False, "source": "local_snapshots"}
+
 
 def _iso(value: datetime) -> str:
     stamp = value.astimezone(timezone.utc).replace(microsecond=0)
     return stamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _exact_object(raw: object, keys: set[str], name: str) -> dict[str, object]:
+    if not isinstance(raw, dict):
+        raise ValueError(f"{name} must be an object")
+    if set(raw) != keys:
+        raise ValueError(f"{name} keys do not match")
+    return raw
+
+
+def _text(raw: object, name: str) -> str:
+    if not isinstance(raw, str):
+        raise ValueError(f"{name} must be a string")
+    return raw
+
+
+def _missing(coverage: Literal["window", "partial"]) -> CabinStatus:
+    return CabinStatus.NONE if coverage == "window" else CabinStatus.UNKNOWN
+
+
+def _status_by_date(calendar: Calendar) -> dict[date, CabinStatus]:
+    return {day.date: day.cabins[0].status for day in calendar.days if day.cabins}
 
 
 def _dump(schema: str, *, refused: bool, refusal: Refusal | None, **fields: object) -> str:
@@ -356,6 +543,7 @@ class SearchOk:
     provenance: Provenance
     calendar: Calendar
     meta: Meta
+    stored: bool = True
     schema: Literal["seatspy.search.v1"] = "seatspy.search.v1"
 
     @property
@@ -372,7 +560,7 @@ class SearchOk:
 
     @property
     def message(self) -> str:
-        return "Search complete."
+        return "Search complete." if self.stored else "Search complete. Snapshot not saved."
 
     def to_json(self) -> str:
         return _dump(
@@ -384,6 +572,7 @@ class SearchOk:
             provenance=self.provenance.to_dict(),
             calendar=self.calendar.to_dict(),
             meta=self.meta.to_dict(),
+            stored=self.stored,
         )
 
 
@@ -461,6 +650,135 @@ SearchOutcome = SearchOk | SearchDryRun | SearchRefused
 
 
 @dataclass(frozen=True)
+class SnapshotRef:
+    fetched_at: datetime
+    coverage: Literal["window", "partial"]
+
+    def to_dict(self) -> dict[str, str]:
+        return {"fetched_at": _iso(self.fetched_at), "coverage": self.coverage}
+
+
+@dataclass(frozen=True)
+class DiffNoPrevious:
+    query: Query
+    current: SnapshotRef | None
+    schema: Literal["seatspy.diff.v1"] = "seatspy.diff.v1"
+
+    @property
+    def refused(self) -> bool:
+        return False
+
+    @property
+    def refusal(self) -> Refusal | None:
+        return None
+
+    @property
+    def exit_code(self) -> int:
+        return 0
+
+    @property
+    def message(self) -> str:
+        if self.current is None:
+            return "No snapshot for this query. Run seatspy search twice."
+        return "No previous snapshot for this query. Run seatspy search once more."
+
+    def to_json(self) -> str:
+        return _dump(
+            self.schema,
+            refused=False,
+            refusal=None,
+            query=self.query.to_dict(),
+            comparison="no_previous_snapshot",
+            snapshots={
+                "previous": None,
+                "current": None if self.current is None else self.current.to_dict(),
+            },
+            changes=[],
+            stored=0 if self.current is None else 1,
+            meta=_DIFF_META,
+        )
+
+
+@dataclass(frozen=True)
+class DiffUnchanged:
+    query: Query
+    previous: SnapshotRef
+    current: SnapshotRef
+    schema: Literal["seatspy.diff.v1"] = "seatspy.diff.v1"
+
+    @property
+    def refused(self) -> bool:
+        return False
+
+    @property
+    def refusal(self) -> Refusal | None:
+        return None
+
+    @property
+    def exit_code(self) -> int:
+        return 0
+
+    @property
+    def message(self) -> str:
+        return "No changes since the previous snapshot."
+
+    def to_json(self) -> str:
+        return _dump(
+            self.schema,
+            refused=False,
+            refusal=None,
+            query=self.query.to_dict(),
+            comparison="unchanged",
+            snapshots={"previous": self.previous.to_dict(), "current": self.current.to_dict()},
+            changes=[],
+            stored=2,
+            meta=_DIFF_META,
+        )
+
+
+@dataclass(frozen=True)
+class DiffChanged:
+    query: Query
+    previous: SnapshotRef
+    current: SnapshotRef
+    changes: ChangedDays
+    schema: Literal["seatspy.diff.v1"] = "seatspy.diff.v1"
+
+    @property
+    def refused(self) -> bool:
+        return False
+
+    @property
+    def refusal(self) -> Refusal | None:
+        return None
+
+    @property
+    def exit_code(self) -> int:
+        return 0
+
+    @property
+    def message(self) -> str:
+        count = 1 + len(self.changes.rest)
+        return "1 day changed." if count == 1 else f"{count} days changed."
+
+    def to_json(self) -> str:
+        return _dump(
+            self.schema,
+            refused=False,
+            refusal=None,
+            query=self.query.to_dict(),
+            comparison="changed",
+            snapshots={"previous": self.previous.to_dict(), "current": self.current.to_dict()},
+            changes=self.changes.to_list(),
+            stored=2,
+            meta=_DIFF_META,
+        )
+
+
+DiffOutcome = DiffNoPrevious | DiffUnchanged | DiffChanged
+
+
+@dataclass(frozen=True)
 class Paths:
     root: Path
 
@@ -471,6 +789,10 @@ class Paths:
     @property
     def op_token(self) -> Path:
         return self.root / "op-service-account-token"
+
+    @property
+    def snapshots(self) -> Path:
+        return self.root / "snapshots"
 
     @staticmethod
     def default() -> Paths:

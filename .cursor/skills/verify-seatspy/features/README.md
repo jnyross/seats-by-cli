@@ -29,3 +29,4 @@ This directory is the maintained source for verifying the user-facing behavior o
 - [Login](./login.md) covers `seatspy login` and the stored session.
 - [Quota](./quota.md) covers `seatspy quota` with and without a session.
 - [Search](./search.md) covers dry-run, live search, and route refusal.
+- [Diff](./diff.md) covers `seatspy diff` against local snapshots. Offline.
