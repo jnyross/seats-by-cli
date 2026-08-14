@@ -20,11 +20,9 @@ For development, install editable:
 pip install -e .
 ```
 
-To cut a release, tag the commit. Do not edit a version field.
+Merging a pull request to `main` cuts the next patch release (`v0.1.0`, then `v0.1.1`, …). Do not edit a version field. hatch-vcs reads the tag.
 
-```
-git tag v0.1.0 && git push origin v0.1.0
-```
+A pull request runs `ci / gate` only. Publishing lives in the `release` workflow, which runs after the merge.
 
 To run the tests:
 

@@ -1,0 +1,68 @@
+name: release
+on:
+  push:
+    branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+concurrency:
+  group: seatspy-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Plan the next release
+        id: plan
+        run: |
+          python3 scripts/next_release.py --plan | tee plan.json
+          echo "version=$(python3 -c 'import json; print(json.load(open("plan.json"))["version"])')" >> "$GITHUB_OUTPUT"
+          echo "tag=$(python3 -c 'import json; print(json.load(open("plan.json"))["tag"])')" >> "$GITHUB_OUTPUT"
+          echo "tag_head=$(python3 -c 'import json; print("true" if json.load(open("plan.json"))["tag_head"] else "false")')" >> "$GITHUB_OUTPUT"
+      - name: Skip when this tag is already published
+        id: published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Offline checks
+        if: steps.published.outputs.exists != 'true'
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m compileall seatspy tests scripts
+          python -m pytest
+      - name: Tag HEAD when it is not a release yet
+        if: steps.published.outputs.exists != 'true' && steps.plan.outputs.tag_head != 'true'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -a "${{ steps.plan.outputs.tag }}" -m "${{ steps.plan.outputs.tag }}"
+      - name: Build and pin the wheel
+        if: steps.published.outputs.exists != 'true'
+        run: |
+          python -m pip install build
+          python -m build
+          scripts/check-wheel.sh dist/*.whl "${{ steps.plan.outputs.version }}"
+      - name: Publish the tag and GitHub Release
+        if: steps.published.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin "${{ steps.plan.outputs.tag }}"
+          gh release create "${{ steps.plan.outputs.tag }}" dist/* --title "${{ steps.plan.outputs.tag }}" --generate-notes
