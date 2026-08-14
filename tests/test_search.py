@@ -27,7 +27,7 @@ from seatspy.types import (
     preflight_block,
 )
 
-FIXTURE = Path("/Users/johnross/Projects/SeatSpyCLI/.audit/seatspy-home.html")
+FIXTURE = Path(__file__).resolve().parent / "fixtures" / "seatspy-home.html"
 
 
 def _query(**overrides: str) -> Query:
@@ -140,6 +140,7 @@ def test_unreadable_route_table_is_parse_failed(tmp_path: Path, monkeypatch) -> 
     outcome = Account(Paths(tmp_path)).search(_query())
     assert isinstance(outcome, SearchRefused)
     assert outcome.refusal.code is RefusalCode.PARSE_FAILED
+    assert outcome.refusal.message == "Route table could not be read."
     assert outcome.stage is Stage.UNKNOWN
     assert outcome.meta.search_consumed is False
 
@@ -218,5 +219,6 @@ def test_unreadable_year_calendar_after_post_is_parse_failed(tmp_path: Path, mon
     outcome = Account(Paths(tmp_path)).search(_query())
     assert isinstance(outcome, SearchRefused)
     assert outcome.refusal.code is RefusalCode.PARSE_FAILED
+    assert outcome.refusal.message == "Year calendar did not complete."
     assert outcome.stage is Stage.SEARCHING
     assert outcome.meta.search_consumed is True

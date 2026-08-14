@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head><title>SeatSpy home fixture</title></head>
+<body>
+<script>
+// Minimal extract of newRouteDictionaryAll for BA LON/NYC city IDs.
+// LHR/JFK must resolve to cities 657/633, not airports 56/215.
+var cfg = {
+newRouteDictionaryAll: {
+  "BA": {
+    "origins": {
+      "657": {
+        "id": 657,
+        "type": "city",
+        "iata": "LON",
+        "iatas": "LHR,LGW,LCY",
+        "title": "London",
+        "destinations": {
+          "633": {"id": 633, "type": "city", "iata": "NYC", "title": "New York"}
+        },
+        "$order": 1
+      },
+      "633": {
+        "id": 633,
+        "type": "city",
+        "iata": "NYC",
+        "iatas": "JFK,EWR,LGA",
+        "title": "New York",
+        "destinations": {
+          "657": {"id": 657, "type": "city", "iata": "LON", "title": "London"}
+        },
+        "$order": 2
+      },
+      "56": {
+        "id": 56,
+        "type": "airport",
+        "iata": "LHR",
+        "iatas": "LON",
+        "title": "London Heathrow",
+        "destinations": {
+          "215": {"id": 215, "type": "airport", "iata": "JFK", "title": "New York JFK"}
+        },
+        "$order": 3
+      },
+      "215": {
+        "id": 215,
+        "type": "airport",
+        "iata": "JFK",
+        "iatas": "NYC",
+        "title": "New York JFK",
+        "destinations": {
+          "56": {"id": 56, "type": "airport", "iata": "LHR", "title": "London Heathrow"}
+        },
+        "$order": 4
+      }
+    }
+  }
+}
+};
+</script>
+</body>
+</html>

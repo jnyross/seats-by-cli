@@ -38,6 +38,7 @@ _AIRLINE_INVALID = Refusal(RefusalCode.AIRLINE_INVALID, "Airline is not in SeatS
 _ROUTE_UNSUPPORTED = Refusal(RefusalCode.ROUTE_UNSUPPORTED, "SeatSpy does not serve that route.")
 _QUOTA_EXHAUSTED = Refusal(RefusalCode.QUOTA_EXHAUSTED, "No searches left this week.")
 _PARSE_FAILED = Refusal(RefusalCode.PARSE_FAILED, "Year calendar did not complete.")
+_ROUTE_PARSE_FAILED = Refusal(RefusalCode.PARSE_FAILED, "Route table could not be read.")
 _SOURCE = "https://www.seatspy.com"
 
 
@@ -78,7 +79,7 @@ class Account:
         if not site.can_search():
             return _refuse(query, _QUOTA_EXHAUSTED, Stage.QUOTA, consumed=False)
         if home.routes is None:
-            return _refuse(query, _PARSE_FAILED, Stage.UNKNOWN, consumed=False)
+            return _refuse(query, _ROUTE_PARSE_FAILED, Stage.UNKNOWN, consumed=False)
         resolved = home.routes.resolve(query)
         if resolved is RouteMiss.AIRLINE_UNKNOWN:
             return _refuse(query, _AIRLINE_INVALID, Stage.ROUTE, consumed=False)
