@@ -9,8 +9,9 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import date, timezone
+from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from seatspy.types import (
     Airline,
@@ -32,6 +33,8 @@ from seatspy.types import (
 _LOGIN_FORM = 'id="login-form"'
 _CSRF = re.compile(r'name="csrf_token" value="([^"]+)"')
 _LOGGED_IN = re.compile(r"""["']?loggedIn["']?\s*:\s*(true|false)\b""")
+_SIGN_IN_PATH = "/auth/sign-in"
+_ACCOUNT_PATH = "/user/account"
 _BLOCKED = ("g-recaptcha", "h-captcha", "cf-turnstile", "challenge-platform")
 _SLASH_DATE = re.compile(r"^(\d{4})/(\d{2})/(\d{2})$")
 
@@ -150,7 +153,7 @@ class Site:
         match = _CSRF.search(html)
         csrf = Csrf(match.group(1)) if match else Csrf("")
         return HomePage(
-            logged_in=_logged_in(html) is True,
+            logged_in=_logged_in(html),
             csrf=csrf,
             routes=parse_routes(html),
         )
@@ -411,11 +414,32 @@ def _parse_day(raw: object) -> date | None:
     return parsed.date()
 
 
-def _logged_in(html: str) -> bool | None:
+def _logged_in(html: str) -> bool:
     match = _LOGGED_IN.search(html)
-    if match is None:
-        return None
-    return match.group(1) == "true"
+    if match is not None:
+        return match.group(1) == "true"
+    paths = _link_paths(html)
+    has_account = _ACCOUNT_PATH in paths or any(path.startswith(f"{_ACCOUNT_PATH}/") for path in paths)
+    return has_account and _SIGN_IN_PATH not in paths
+
+
+class _LinkPathParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.paths: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "a":
+            return
+        for name, value in attrs:
+            if name == "href" and value:
+                self.paths.add(urlsplit(value).path.rstrip("/") or "/")
+
+
+def _link_paths(html: str) -> set[str]:
+    parser = _LinkPathParser()
+    parser.feed(html)
+    return parser.paths
 
 
 def _blocked(html: str) -> bool:
