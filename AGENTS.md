@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## pstack on Devin
+
+pstack is a Cursor plugin. Devin cannot install it (Devin reads `.devin-plugin/plugin.json`, `.claude-plugin/plugin.json`, or a root `plugin.json`; pstack ships only `.cursor-plugin/plugin.json`), so its skills are vendored under `.devin/skills/`, which Devin loads automatically. `scripts/sync-pstack.sh` re-vendors them from the pinned upstream commit. In Cursor nothing changes: the installed plugin still supplies pstack, and `.cursor/skills/` holds only `verify-seatspy`.
+
+The skill text is upstream and unedited, so it speaks Cursor. Read it through this mapping in a Devin session:
+
+- A `/skill-name` reference means the skill of that name. Invoke it with the `skill` tool; there are no slash commands.
+- A `Task` subagent means a `sidekick` handoff. There is one persistent sidekick, and Devin cannot pick a model, so `.cursor/rules/pstack-models.mdc` is inert here — the per-role model slugs do not apply and no role runs on a different model.
+- `setup-pstack` has nothing to configure here; it writes Cursor model rules. Skip it.
+- A multi-model panel (how critics, arena runners, architect runners, interrogate reviewers, arena cross-judge pool) has no same-machine equivalent. Run it either as consecutive sidekick handoffs, each given its own stated stance, or as parallel child sessions via `devin_session_create`. Fan-out counts carry over; the model diversity the panel assumes does not, so say so when reporting a panel's verdict.
+- `swarm` workers are child sessions. They get their own machines and do not share this checkout, so a worker needs its own branch and its own setup step.
+- `AskQuestion` means `message_user` with `content_type="user_question"`.
+- Graphite (`gt`, "the stack") means the `git_stack` tool. Never rebase or merge stacked branches by hand.
+- Bugbot and the agentic security review mean Devin Review; its findings arrive as PR comments, read with `git_view_pr`. CI status is `git_pr_checks` and failing logs are `git_ci_job_logs`.
+- Opening or updating a PR is `fetch_pr_template` then `git_create_pr` / `git_update_pr`, not `gh pr create`.
+- The `cursor-team-kit` skills some playbooks call (`deslop`, `control-cli`, `control-ui`) are not vendored. Use `no-comments` and `unslop` in place of `deslop`, and drive this CLI yourself or through `testing_agent` in place of the control skills. Do not fake a skill that is not present; say it is missing.
+- Custom subagent profiles (`poteto-agent`, `comment-sicko`) do not load in cloud sessions. Routing to one means running the matching skill in a sidekick handoff.
+
+Devin's own operating rules win where they conflict: the lead owns user messages, PR creation and updates, secret requests, and starting `testing_agent`, whatever a playbook assigns to a subagent.
+
 ## Cursor Cloud specific instructions
 
 `seatspy` is a terminal-only Python CLI (no server, no browser on the happy path). It reads SeatSpy credentials from 1Password (`op`) and talks to `https://www.seatspy.com` over HTTP. See `README.md` and `docs/product.md` for the command surface, and `.cursor/skills/verify-seatspy/` for the verification recipes.
