@@ -15,7 +15,7 @@
 - Lint: there is no dedicated linter configured (only `pytest` in `pyproject.toml`). Use `.venv/bin/python -m compileall seatspy tests scripts` as a syntax check.
 - Test: `.venv/bin/python -m pytest`. The suite has about 60 tests, runs fully offline, and hits no network.
 - Build: editable install (`pip install -e ".[dev]"`), already done by the startup install. A release wheel is `python -m build` then `scripts/check-wheel.sh dist/*.whl`.
-- CI: pytest, compileall, and a wheel smoke. No live SeatSpy, no `op`.
+- CI: pytest, compileall, and a wheel smoke. No live SeatSpy, no `op`. Merging to `main` also runs the `release` workflow, which tags the next patch and publishes a GitHub Release.
 - Run: `.venv/bin/python -m seatspy <login|quota|search> ...`. Stdout is one JSON object; stderr is one human line. Exit codes: `0` ok, `1` refused, `2` unexpected error. `seatspy --version` is argparse metadata, not a command.
 
 ### Live commands need the 1Password secret
