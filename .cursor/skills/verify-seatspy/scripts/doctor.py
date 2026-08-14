@@ -51,7 +51,7 @@ def main() -> int:
     )
 
     help_ok = True
-    for command in ("login", "quota", "search"):
+    for command in ("login", "quota", "search", "diff"):
         completed = _run([str(PYTHON), "-m", "seatspy", command, "--help"])
         report["help"][command] = completed.returncode
         if completed.returncode != 0:

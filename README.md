@@ -58,11 +58,21 @@ Asks whether a search is allowed. `--json` is accepted and changes nothing. `can
 seatspy search --airline BA --from LHR --to JFK --direction one-way --cabin business --from-date 2026-09-01 --to-date 2026-09-30 --json
 ```
 
-Checks the session, quota, and route, then POSTs the search form and reads the year calendar. `--dry-run` stops before the POST.
+Checks the session, quota, and route, then POSTs the search form and reads the year calendar. `--dry-run` stops before the POST. A successful live search also writes the projected calendar under `~/.config/seatspy/snapshots/`.
 
 ```
 seatspy search --airline BA --from LHR --to JFK --direction one-way --cabin business --from-date 2026-09-01 --to-date 2026-09-30 --dry-run --json
 ```
+
+## Diff
+
+```
+seatspy diff --airline BA --from LHR --to JFK --direction one-way --cabin business --from-date 2026-09-01 --to-date 2026-09-30 --json
+```
+
+Compares the last two successful searches for that exact query. Same flags as `search`. No `--dry-run`. Reads only `~/.config/seatspy/snapshots/`. Never talks to SeatSpy and never spends a search.
+
+Zero or one saved search is still `status` `ok` with `comparison` `no_previous_snapshot`. Run `search` twice for the same ask before `diff` can report day changes.
 
 ## Exit codes
 

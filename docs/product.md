@@ -35,7 +35,56 @@ seatspy search --airline BA --from LHR --to JFK --direction one-way --cabin busi
 7. If that JSON never completes, read the calendar DOM once with a scripted browser and the saved session. Not an LLM browser.
 8. Filters `--from-date` / `--to-date` / `--cabin` on the returned year. Prints one JSON object on stdout.
 
-`--dry-run` stops after step 4 and does not POST.
+`--dry-run` stops after step 4 and does not POST. A successful live search writes the projected calendar under `~/.config/seatspy/snapshots/`. Dry-run and refused searches do not.
+
+## Diff
+
+`diff` uses the same query flags as `search`. It does not take `--dry-run`. It never constructs `Site`, never POSTs, and never reads cookies.
+
+```
+seatspy diff --airline BA --from LHR --to JFK --direction one-way --cabin business --from-date 2026-09-01 --to-date 2026-09-30 --json
+```
+
+The command reads the last two `SearchOk` calendars for that exact `Query` from `~/.config/seatspy/snapshots/`. The filename is the SHA-256 of the canonical `Query.to_dict()` JSON. A different cabin, airport, or date window is a different file.
+
+`status` is always `ok`. `refusal` is always null. Exit is `0`. `meta.search_consumed` is false. `meta.source` is `local_snapshots`.
+
+`comparison` is the discriminator.
+
+- `no_previous_snapshot` when the store has 0 or 1 snapshot. `snapshots.previous` is null. `snapshots.current` is null when `stored` is `0`. `changes` is `[]`. Stderr says to run `search` twice, or once more if one snapshot is already there.
+- `unchanged` when two snapshots exist and no day moved.
+- `changed` when two snapshots exist and at least one day appeared, vanished, or changed status.
+
+A vanished day is a date that had `available`, `waitlist`, or `unknown` and that `YearSnapshot.project` dropped because the cabin went to `none`. A missing date under `partial` coverage is `unknown`, not `vanished`.
+
+```json
+{
+  "schema": "seatspy.diff.v1",
+  "status": "ok",
+  "query": {
+    "airline": "BA",
+    "origin": "LHR",
+    "destination": "JFK",
+    "direction": "one-way",
+    "cabin": "business",
+    "from_date": "2026-09-01",
+    "to_date": "2026-09-30"
+  },
+  "comparison": "changed",
+  "snapshots": {
+    "previous": {"fetched_at": "2026-08-14T10:00:00Z", "coverage": "window"},
+    "current": {"fetched_at": "2026-08-14T18:00:00Z", "coverage": "window"}
+  },
+  "changes": [
+    {"date": "2026-09-12", "change": "appeared", "before": "none", "after": "available"},
+    {"date": "2026-09-13", "change": "vanished", "before": "available", "after": "none"},
+    {"date": "2026-09-14", "change": "status_changed", "before": "available", "after": "waitlist"}
+  ],
+  "stored": 2,
+  "meta": {"search_consumed": false, "source": "local_snapshots"},
+  "refusal": null
+}
+```
 
 ## Access
 
@@ -45,7 +94,7 @@ Do not bypass weekly caps, paywalls, or bot checks. Do not retry a blocked searc
 
 ## What v1 does
 
-One route, one search, one snapshot. A quota command that does not spend a search. Optional date window and cabin filter. Structured JSON an agent can parse without a screenshot.
+One route, one search, one snapshot. A quota command that does not spend a search. A diff command that compares the last two snapshots for the same query without talking to SeatSpy. Optional date window and cabin filter. Structured JSON an agent can parse without a screenshot.
 
 ## What v1 refuses
 
@@ -100,6 +149,7 @@ Stdout is JSON. Stderr is human text.
     "source": "https://www.seatspy.com",
     "search_consumed": true
   },
+  "stored": true,
   "refusal": null
 }
 ```
@@ -139,5 +189,4 @@ Build unknowns are in `.audit/spike/UNKNOWNS.md`. The happy path is HTTP. Do not
 - Return trips
 - Alerts
 - Where Can I Go
-- Diff against the last snapshot
 - A named-ask file if flag search gets painful
