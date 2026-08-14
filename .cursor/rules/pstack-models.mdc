@@ -4,26 +4,24 @@ alwaysApply: true
 ---
 # pstack model configuration. One line per role. Delete a line to fall back to the skill default.
 # `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit Task `model`). Alias entries in a panel list still count toward its fan-out.
-# Cursor Ultra tilt from pstack-model-routing-reference-2026-08-14.
-# Volume work uses the Cursor Models pool (Grok 4.6, Composer 2.5). That pool is the high-limit one on Ultra.
-# Other Models stay on diagnosis and judgment: Sol XHigh for bugs/perf, Fable High to judge, Fable XHigh for hardest.
-# Grok Medium and Grok High Standard are not Task slugs here, so Grok 4.6 High Fast is the Grok stand-in.
-# Ordinary panels are three: Fable High, Grok, Gemini 3.7 Flash. Architect keeps Opus. Cross-judge pool can be larger.
+# Cursor Ultra tilt: Grok 4.6 for volume and former Sol diagnosis roles; Sol XHigh for judgment (replaces Fable).
+# Grok 4.6 has no xhigh Task slug here, so Sol XHigh maps to Grok 4.6 High Fast (the only 4.6 thinking tier).
+# Ordinary panels are three: Sol XHigh, Grok, Gemini 3.7 Flash. Architect keeps Opus.
 feature, refactoring: cursor-grok-4.6-high-fast
-bug-fix: gpt-5.6-sol-xhigh
-perf-issue: gpt-5.6-sol-xhigh
+bug-fix: cursor-grok-4.6-high-fast
+perf-issue: cursor-grok-4.6-high-fast
 hillclimb: cursor-grok-4.6-high-fast
-judgment and prose: claude-fable-5-thinking-high
-hardest tasks: claude-fable-5-thinking-xhigh
+judgment and prose: gpt-5.6-sol-xhigh
+hardest tasks: gpt-5.6-sol-xhigh
 how explorer: cursor-grok-4.6-high-fast
-how explainer: claude-fable-5-thinking-high
-how critics: claude-fable-5-thinking-high, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
+how explainer: gpt-5.6-sol-xhigh
+how critics: gpt-5.6-sol-xhigh, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
 why investigators: cursor-grok-4.6-high-fast
-why synthesizer: claude-fable-5-thinking-high
+why synthesizer: gpt-5.6-sol-xhigh
 reflect tooling: cursor-grok-4.6-high-fast
-reflect judgment, divergent, synthesizer: claude-fable-5-thinking-high
-arena runners: claude-fable-5-thinking-high, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
-arena cross-judge pool: claude-fable-5-thinking-xhigh, gpt-5.6-sol-xhigh, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
+reflect judgment, divergent, synthesizer: gpt-5.6-sol-xhigh
+arena runners: gpt-5.6-sol-xhigh, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
+arena cross-judge pool: gpt-5.6-sol-xhigh, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
 swarm workers: composer-2.5
-architect runners: claude-fable-5-thinking-high, cursor-grok-4.6-high-fast, claude-opus-5-thinking-high
-interrogate reviewers: claude-fable-5-thinking-high, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
+architect runners: gpt-5.6-sol-xhigh, cursor-grok-4.6-high-fast, claude-opus-5-thinking-high
+interrogate reviewers: gpt-5.6-sol-xhigh, cursor-grok-4.6-high-fast, gemini-3.7-flash-high
