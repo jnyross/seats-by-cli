@@ -33,9 +33,9 @@ pip install -e ".[dev]"
 python -m pytest
 ```
 
-If `op` should use a service account, put the token in `~/.config/seatspy/op-service-account-token`. Skip that file when `op` is already signed in. Cloud agents write that file on start from `OP_SERVICE_ACCOUNT_TOKEN`, or from `ONEPASSWORDSA` when the standard name is unset.
+If `op` should use a service account, put the token in `~/.config/seatspy/op-service-account-token`. Skip that file when `op` is already signed in.
 
-On a Cursor Cloud agent, add the token as a Runtime Secret named `OP_SERVICE_ACCOUNT_TOKEN` (or the existing `ONEPASSWORDSA` secret). Use a Runtime Secret, not an Environment Variable, so the value is `[REDACTED]` in tool results and transcripts. There is no `seatspy setup` prompt and nothing copies the secret onto disk. Doctor reports the source kind (`env:OP_SERVICE_ACCOUNT_TOKEN`, `env:ONEPASSWORDSA`, `file`, or `none`). It never prints the value.
+On a Cursor Cloud agent, add the token as a Runtime Secret named `OP_SERVICE_ACCOUNT_TOKEN` (or the existing `ONEPASSWORDSA` secret). Use a Runtime Secret, not an Environment Variable, so the value is `[REDACTED]` in tool results and transcripts. There is no `seatspy setup` prompt. Login reads the env var and does not need a token file. Doctor reports the source kind (`env:OP_SERVICE_ACCOUNT_TOKEN`, `env:ONEPASSWORDSA`, `file`, or `none`). It never prints the value.
 
 ## Sign in
 

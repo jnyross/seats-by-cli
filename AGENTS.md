@@ -20,8 +20,8 @@
 
 ### Live commands need the 1Password secret
 
-- `login`, and any logged-in `quota`/`search`, need a 1Password service-account token written to `~/.config/seatspy/op-service-account-token`. That file is git-ignored and does not survive into a fresh VM.
-- The repo's `start` step (`bash scripts/cloud-env.sh wire`) reads `OP_SERVICE_ACCOUNT_TOKEN`. If that name is unset, it falls back to `ONEPASSWORDSA`. When both names are set, `OP_SERVICE_ACCOUNT_TOKEN` wins.
+- `login` reads a 1Password service-account token from a Cursor Runtime Secret named `OP_SERVICE_ACCOUNT_TOKEN`, or from `ONEPASSWORDSA` when the standard name is unset. Use a Runtime Secret, not an Environment Variable, so the value is `[REDACTED]` in tool results and transcripts. A laptop can still use `~/.config/seatspy/op-service-account-token` or a signed-in desktop `op`.
+- Doctor reports `token_source` (`env:OP_SERVICE_ACCOUNT_TOKEN`, `env:ONEPASSWORDSA`, `file`, or `none`). It never prints the value. The start hook `bash scripts/cloud-env.sh wire` may still write the token file. Login does not need that file when the Runtime Secret is present.
 - Without a token, `login` fails reading 1Password (exit `2`), and `quota`/`search` refuse with `SESSION_MISSING` (exit `1`) because there is no `~/.config/seatspy/cookies.txt`. These refusals are the app working correctly, not a crash.
 
 ### Homepage session detection
