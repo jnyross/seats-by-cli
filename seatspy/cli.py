@@ -2,9 +2,17 @@ from __future__ import annotations
 
 import argparse
 import sys
+from importlib import metadata
 
 from seatspy.account import Account
 from seatspy.types import Query, TransportError
+
+
+def _installed_version() -> str:
+    try:
+        return metadata.version("seatspy")
+    except metadata.PackageNotFoundError:
+        return "0+unknown"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -12,6 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     shared.add_argument("--json", action="store_true", help="Accepted. Stdout is always JSON.")
     parser = argparse.ArgumentParser(prog="seatspy")
     parser.add_argument("--json", action="store_true", help="Accepted. Stdout is always JSON.")
+    parser.add_argument("--version", action="version", version=_installed_version())
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("login", parents=[shared], help="Sign in and store the session.")
     sub.add_parser("quota", parents=[shared], help="Check whether a search is allowed.")

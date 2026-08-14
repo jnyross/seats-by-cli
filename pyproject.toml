@@ -1,14 +1,17 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "seatspy"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Personal CLI for a SeatSpy account"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "John Ross" }]
+
+[project.urls]
+Repository = "https://github.com/jnyross/seats-by-cli"
 
 [project.optional-dependencies]
 dev = ["pytest"]
@@ -16,8 +19,14 @@ dev = ["pytest"]
 [project.scripts]
 seatspy = "seatspy.cli:main"
 
+[tool.hatch.version]
+source = "vcs"
+
 [tool.hatch.build.targets.wheel]
 packages = ["seatspy"]
+
+[tool.hatch.build.targets.sdist]
+include = ["seatspy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

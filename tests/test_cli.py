@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from importlib import metadata
 from types import SimpleNamespace
 
 import pytest
@@ -84,6 +85,27 @@ def test_search_invalid_cabin_is_exit_2(capsys) -> None:
         == 2
     )
     assert capsys.readouterr().err
+
+
+def test_version_flag_without_command(capsys) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["--version"])
+    assert exc.value.code == 0
+    out, err = capsys.readouterr()
+    assert out.strip() == metadata.version("seatspy")
+    assert err == ""
+
+
+def test_no_args_still_requires_command() -> None:
+    with pytest.raises(SystemExit) as exc:
+        build_parser().parse_args([])
+    assert exc.value.code == 2
+
+
+def test_login_version_is_unknown_argument() -> None:
+    with pytest.raises(SystemExit) as exc:
+        build_parser().parse_args(["login", "--version"])
+    assert exc.value.code == 2
 
 
 def test_search_parses_required_flags() -> None:
