@@ -16,6 +16,7 @@ The skill text is upstream and unedited, so it speaks Cursor. Read it through th
 - Bugbot and the agentic security review mean Devin Review; its findings arrive as PR comments, read with `git_view_pr`. CI status is `git_pr_checks` and failing logs are `git_ci_job_logs`.
 - Opening or updating a PR is `fetch_pr_template` then `git_create_pr` / `git_update_pr`, not `gh pr create`.
 - The `cursor-team-kit` skills some playbooks call (`deslop`, `control-cli`, `control-ui`) are not vendored. Use `no-comments` and `unslop` in place of `deslop`, and drive this CLI yourself or through `testing_agent` in place of the control skills. Do not fake a skill that is not present; say it is missing.
+- Cursor's own built-in skills are not here either. `create-skill`, which `automate-me` and `reflect` route to, means writing the `SKILL.md` yourself against the format in the Devin docs; `babysit` means the vendored `poteto-mode/playbooks/babysit.md`, which is the playbook those pages contrast with Cursor's built-in.
 - Custom subagent profiles (`poteto-agent`, `comment-sicko`) do not load in cloud sessions. Routing to one means running the matching skill in a sidekick handoff.
 
 Devin's own operating rules win where they conflict: the lead owns user messages, PR creation and updates, secret requests, and starting `testing_agent`, whatever a playbook assigns to a subagent.

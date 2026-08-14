@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-UPSTREAM_REPO="${PSTACK_UPSTREAM_REPO:-https://github.com/cursor/plugins.git}"
+CANONICAL_UPSTREAM_REPO="https://github.com/cursor/plugins.git"
+UPSTREAM_REPO="${PSTACK_UPSTREAM_REPO:-$CANONICAL_UPSTREAM_REPO}"
 PINNED_SHA="2a8044425c7bddf429c3bdedf3ab61e791d34d65"
 sha="${1:-${PSTACK_SHA:-$PINNED_SHA}}"
 source_dir="${PSTACK_SOURCE_DIR:-}"
@@ -61,7 +62,7 @@ sidekick handoff instead.
 EOF
 
 cat >"$ROOT/.devin/skills/PSTACK_UPSTREAM" <<EOF
-upstream_repo: $UPSTREAM_REPO
+upstream_repo: $CANONICAL_UPSTREAM_REPO
 subfolder: pstack
 version: 0.14.1
 commit: $sha
