@@ -323,6 +323,19 @@ def test_corrupt_snapshot_is_exit_2(tmp_path: Path, monkeypatch, capsys) -> None
     assert capsys.readouterr().err
 
 
+def test_record_overwrites_corrupt_snapshot(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.record(_ok(_calendar((SEP12, CabinStatus.AVAILABLE)), FIRST))
+    files = list((tmp_path / "snapshots").glob("*.json"))
+    assert files
+    files[0].write_text("{not-json")
+    store.record(_ok(_calendar((SEP13, CabinStatus.AVAILABLE)), SECOND))
+    outcome = store.diff(_query())
+    assert isinstance(outcome, DiffNoPrevious)
+    assert outcome.current is not None
+    assert json.loads(outcome.to_json())["stored"] == 1
+
+
 def test_snapshots_module_does_not_import_site() -> None:
     source = Path(__file__).resolve().parents[1] / "seatspy" / "snapshots.py"
     tree = ast.parse(source.read_text())
@@ -379,3 +392,12 @@ def test_search_ok_records_and_oserror_keeps_calendar(tmp_path: Path, monkeypatc
     assert failed.stored is False
     assert failed.message == "Search complete. Snapshot not saved."
     assert failed.calendar.days
+
+    def fail_snapshot(self, result: SearchOk) -> None:
+        raise SnapshotError("Snapshot file is unreadable.")
+
+    monkeypatch.setattr("seatspy.account.SnapshotStore.record", fail_snapshot)
+    bad = Account(Paths(tmp_path)).search(_query())
+    assert isinstance(bad, SearchOk)
+    assert bad.stored is False
+    assert bad.calendar.days

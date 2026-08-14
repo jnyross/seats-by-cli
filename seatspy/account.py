@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from seatspy.credentials import read_login
 from seatspy.session import SessionStore
-from seatspy.snapshots import SnapshotStore
+from seatspy.snapshots import SnapshotError, SnapshotStore
 from seatspy.site import (
     HomeBlocked,
     SearchBlocked,
@@ -130,7 +130,7 @@ class Account:
         )
         try:
             SnapshotStore(self.paths).record(ok)
-        except OSError:
+        except (OSError, SnapshotError):
             return replace(ok, stored=False)
         return ok
 

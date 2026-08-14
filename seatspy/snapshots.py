@@ -70,7 +70,10 @@ class SnapshotStore:
 
     def record(self, result: SearchOk) -> None:
         incoming = StoredSnapshot.from_search(result)
-        state = self._load(result.query)
+        try:
+            state = self._load(result.query)
+        except SnapshotError:
+            state = None
         next_state: SnapshotHead | SnapshotPair
         if state is None:
             next_state = SnapshotHead(result.query, incoming)
