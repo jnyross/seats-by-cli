@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seatspy"
+version = "0.1.0"
+description = "Personal CLI for a SeatSpy account"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "John Ross" }]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+seatspy = "seatspy.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["seatspy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
